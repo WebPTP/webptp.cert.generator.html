@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8">
+		<title>证书申请生成 - WebPTP</title>
+        <script>
+            var QUERY_URL = "https://cert.stu.red/query/";
+        </script>
+	</head>
+	<style type="text/css">
+		/* Basic Grey */
+		.basic-grey {
+			margin-left: auto;
+			margin-right: auto;
+			max-width: 500px;
+			background: #F7F7F7;
+			padding: 25px 15px 25px 10px;
+			font: 18px Georgia, "Times New Roman", Times, serif;
+			color: #888;
+			text-shadow: 1px 1px 1px #FFF;
+			border: 1px solid #E4E4E4;
+		}
+
+		.basic-grey h1 {
+			font-size: 25px;
+			padding: 0px 0px 10px 40px;
+			display: block;
+			border-bottom: 1px solid #E4E4E4;
+			margin: -10px -15px 30px -10px;
+			color: #888;
+		}
+
+		.basic-grey h1>span {
+			display: block;
+			font-size: 13px;
+		}
+
+		.basic-grey label {
+			display: block;
+			margin: 0px;
+		}
+
+		.basic-grey label>span {
+			float: left;
+			width: 20%;
+			text-align: right;
+			padding-right: 10px;
+			margin-top: 10px;
+			color: #888;
+		}
+
+		.basic-grey input[type="text"],
+		.basic-grey input[type="email"],
+		.basic-grey textarea,
+		.basic-grey select {
+			border: 1px solid #DADADA;
+			color: #888;
+			height: 30px;
+			margin-bottom: 16px;
+			margin-right: 6px;
+			margin-top: 2px;
+			outline: 0 none;
+			padding: 3px 3px 3px 5px;
+			width: 70%;
+			font-size: 14px;
+			line-height: 15px;
+			box-shadow: inset 0px 1px 4px #ECECEC;
+			-moz-box-shadow: inset 0px 1px 4px #ECECEC;
+			-webkit-box-shadow: inset 0px 1px 4px #ECECEC;
+		}
+
+		.basic-grey textarea {
+			padding: 5px 3px 3px 5px;
+		}
+
+		.basic-grey select {
+			appearance: none;
+			-webkit-appearance: none;
+			-moz-appearance: none;
+			text-indent: 0.01px;
+			text-overflow: '';
+			width: 70%;
+			height: 35px;
+			line-height: 25px;
+		}
+
+		.basic-grey .text {
+			width: 70%;
+			height: 35px;
+			line-height: 35px;
+		}
+
+		.basic-grey textarea {
+			height: 135px;
+		}
+
+		.basic-grey .button {
+			background: #E27575;
+			border: none;
+			padding: 10px 25px 10px 25px;
+			color: #FFF;
+			box-shadow: 1px 1px 5px #B6B6B6;
+			border-radius: 3px;
+			text-shadow: 1px 1px 1px #9E3F3F;
+			cursor: pointer;
+		}
+
+		.basic-grey .button:hover {
+			background: #CF7A7A
+		}
+	</style>
+
+	<body>
+
+		<form id="iForm" action="" method="post" class="basic-grey">
+			<h1>WebPTP签名证书生成
+				<span>WebPTP签名证书申请邮件标准格式，不需要使用网络和储存；如果需要使用随机生成证书公钥功能，请离线访问本页面，否则无法保证您的证书安全。</span>
+			</h1>
+
+			<label>
+				<span>证书邮箱 :</span>
+				<input required type="email" name="email" placeholder="" oninput="onUpdate();" onchange="onUpdate();" />
+			</label>
+
+			<label>
+				<span>邮箱保护 :</span>
+				<select required name="email_protection" onchange="onUpdate();">
+					<option value="SHA256>HEX">隐藏邮箱地址 (使用SHA256)</option>
+					<option value="public">公开邮箱地址</option>
+				</select>
+			</label>
+
+			<label>
+				<span>加密算法 :</span>
+				<select required name="algorithm" onchange="onUpdate();">
+					<option value="ECC P-384">ECC P-384</option>
+				</select>
+			</label>
+
+			<label>
+				<span>公钥格式 :</span>
+				<select required id="el_public_key_format" name="public_key_format" onchange="onUpdate();">
+					<option value="PEM">PEM格式</option>
+					<option value="JWK">JWK格式</option>
+				</select>
+			</label>
+
+			<label>
+				<span>&nbsp;</span>
+				<input type="button" class="button" value="随机生成证书公钥 (不推荐使用)" onclick="doGenerate()" />
+			</label>
+
+			<label id="el_private_key_container" style="display: none;">
+				<span>证书私钥(JWK格式)[只读,请注意保护私钥不要泄漏] :</span>
+				<textarea id="el_private_key" readonly></textarea>
+			</label>
+
+			<label>
+				<span>证书公钥 :</span>
+				<textarea required id="el_public_key" name="public_key" onchange="onUpdate();"
+					oninput="onUpdate();"></textarea>
+			</label>
+
+			<label>
+				<span>证书有效期 :</span>
+				<select required name="cert_validity_period" onchange="onUpdate();">
+					<option value="0.5">6个月</option>
+					<option value="1">1年</option>
+					<option value="2">2年</option>
+					<option value="2.5" selected>2年6个月</option>
+					<option value="3">3年</option>
+					<option value="5">5年</option>
+					<option value="10">10年</option>
+					<option value="20">20年</option>
+					<option value="30">30年</option>
+					<option value="0">永久</option>
+				</select>
+			</label>
+
+
+			<br />
+			<hr />
+			<p>请使用证书邮箱，将以下信息，发送至 <span>webptp@163.com</span> 邮箱。(生成时间: <span id="generation_time">未生成</span>)</p>
+			<label>
+				<span>收件人 :</span>
+				<p class="text"><span>webptp@163.com</span></p>
+			</label>
+			<label>
+				<span>邮件主题 :</span>
+				<p class="text">任意</p>
+			</label>
+			<label>
+				<span>邮件内容 :</span>
+				<textarea id="email_content" name="email_content" placeholder="" style="height: 260px;"></textarea>
+			</label>
+
+			<br />
+			<hr />
+			<p>邮件发送后不会存在任何回复，查看申请结果请访问网址:</p>
+			<p> <a id="queryResults" href="" target="_blank"
+					style="width: 100%;overflow: hidden;text-overflow: ellipsis;"></a> <span
+					id="resultHelp">请先填写证书邮箱地址，才能生成查询结果链接。</span> </p>
+			<br />
+		</form>
+
+		<script>
+			var el_elemail_content = document.getElementById("email_content");
+			var el_generation_time = document.getElementById("generation_time");
+			var el_public_key_format = document.getElementById("el_public_key_format");
+			var el_public_key = document.getElementById("el_public_key");
+			var el_private_key = document.getElementById("el_private_key");
+			var el_private_key_container = document.getElementById("el_private_key_container");
+			var el_queryResults = document.getElementById("queryResults");
+			var el_resultHelp = document.getElementById("resultHelp");
+
+			var form = document.getElementById("iForm");
+			form.addEventListener("submit", function(event) {
+				event.preventDefault();
+				onUpdate(true);
+			});
+
+			function sha256_hex(message) {
+				var encoder = new TextEncoder();
+				var data = encoder.encode(message);
+				return crypto.subtle.digest('SHA-256', data).then(hashBuffer => {
+					var hashArray = Array.from(new Uint8Array(hashBuffer));
+					return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+				})
+			}
+
+			function formatCurrentDate() {
+				var currentDate = new Date();
+
+				var year = currentDate.getFullYear();
+				var month = currentDate.getMonth() + 1;
+				var day = currentDate.getDate();
+				var hours = currentDate.getHours();
+				var minutes = currentDate.getMinutes();
+				var seconds = currentDate.getSeconds();
+
+				month = month < 10 ? '0' + month : month;
+				day = day < 10 ? '0' + day : day;
+				hours = hours < 10 ? '0' + hours : hours;
+				minutes = minutes < 10 ? '0' + minutes : minutes;
+				seconds = seconds < 10 ? '0' + seconds : seconds;
+
+				return year + '年' + month + '月' + day + '日 ' + hours + ':' + minutes + ':' + seconds;
+			}
+
+			function generateKeyPair() {
+				return crypto.subtle.generateKey({
+						name: 'ECDSA',
+						namedCurve: 'P-384',
+					},
+					true,
+					['sign', 'verify']
+				).then(keyPair => {
+					let keyPairJwk = {};
+					return Promise.all([
+						crypto.subtle.exportKey('jwk', keyPair.publicKey).then(publicKey => {
+							keyPairJwk.publicKey = JSON.stringify(publicKey);
+						}),
+						crypto.subtle.exportKey('jwk', keyPair.privateKey).then(privateKey => {
+							keyPairJwk.privateKey = JSON.stringify(privateKey);
+						}),
+					]).then(() => {
+						return keyPairJwk;
+					})
+				});
+			}
+
+			function doGenerate() {
+				generateKeyPair().then((keyPairJwk) => {
+					el_public_key_format.value = "JWK";
+					el_public_key.value = keyPairJwk.publicKey;
+					el_private_key.value = keyPairJwk.privateKey;
+					el_private_key_container.style.display = "block";
+					onUpdate();
+				}).catch((error) => {
+					alert(
+						"抱歉，您当前使用的浏览器版本过低，不支持[ECC P-384]加密算法，不能生成证书公钥!\r\n\r\n推荐使用现代浏览器，例如:\r\n 谷歌浏览器、火狐浏览器和Edge...等浏览器")
+					console.log("[error]", error);
+				});
+			}
+
+			function onUpdate(check) {
+
+				var formData = {};
+				for (let i = 0; i < form.elements.length; i++) {
+					let el = form.elements[i];
+					if (!el.name) {
+						continue;
+					}
+					if (el.type === 'checkbox') {
+						formData[el.name] = el.checked;
+					} else {
+						formData[el.name] = el.value;
+					}
+				}
+				if (formData.email.trim() == "") {
+					el_queryResults.style.display = "none";
+					el_resultHelp.style.display = "block";
+				} else {
+					el_queryResults.style.display = "block";
+					el_resultHelp.style.display = "none";
+					Promise.resolve().then(() => {
+						switch (formData.email_protection) {
+							case "SHA256>HEX": {
+								return sha256_hex("webptp:" + formData.email);
+							}
+							case "public": {
+								return formData.email;
+							}
+						}
+						throw "邮箱保护不支持: " + formData.email_protection;
+					}).then(queryId => {
+						var resultUrl = QUERY_URL + queryId;
+						el_queryResults.href = resultUrl;
+						el_queryResults.innerText = resultUrl;
+					})
+				}
+
+				if (!form.checkValidity()) {
+					el_elemail_content.value = "";
+					return;
+				}
+
+				var content = {
+					Email: formData.email.trim(),
+					EmailProtection: formData.email_protection.trim(),
+					Algorithm: formData.algorithm.trim(),
+					PublicKeyFormat: formData.public_key_format.trim(),
+					PublicKey: formData.public_key.trim(),
+					ValidityPeriod: formData.cert_validity_period.trim(),
+				};
+
+				el_elemail_content.value = '{{"WEBPTP_CERT"}}\r\n' + JSON.stringify(content, null, 2) + '\r\n{{/"WEBPTP_CERT"}}';
+				el_generation_time.innerText = formatCurrentDate();
+			}
+
+			onUpdate();
+		</script>
+
+	</body>
+
+</html>
